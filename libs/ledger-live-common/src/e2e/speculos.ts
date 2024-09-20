@@ -276,13 +276,13 @@ export async function startSpeculos(
     coinapps,
     onSpeculosDeviceCreated,
   };
-
+  console.warn("deviceParams", deviceParams);
   try {
     return await createSpeculosDevice(deviceParams);
   } catch (e: unknown) {
     if (process.env.CI) console.error(e);
     console.error(e);
-    log("engine", `test ${testName} failed with ${String(e)}`);
+    console.warn("engine", `test ${testName} failed with ${String(e)}`);
   }
 }
 
