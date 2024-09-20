@@ -93,10 +93,12 @@ export const test = base.extend<TestFixtures>({
         "SPECULOS_PID_OFFSET",
         (speculosPort - BASE_PORT) * 1000 + parseInt(process.env.TEST_WORKER_INDEX || "0") * 100,
       );
+      console.warn("SPECULOS_PID_OFFSET", getEnv("SPECULOS_PID_OFFSET"));
       device = await startSpeculos(
         testInfo.title.replace(/ /g, "_"),
         specs[speculosApp.name.replace(/ /g, "_")],
       );
+      console.warn("SPECULOS_STARTED", device);
       setEnv("SPECULOS_API_PORT", device?.ports.apiPort?.toString());
     }
 
