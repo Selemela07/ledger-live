@@ -152,7 +152,7 @@ jobs:
         with:
           retention-days: 1
           name: test-results-${{ matrix.shardIndex }}
-          path: "apps/ledger-live-desktop/test-results"
+          path: "apps/ledger-live-desktop/tests/artifacts"
 
       - name: Upload Xray Results
         if: ${{ !cancelled() && inputs.export_to_xray }}
