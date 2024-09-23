@@ -146,6 +146,14 @@ jobs:
           name: allure-results-${{ matrix.shardIndex }}
           path: "apps/ledger-live-desktop/allure-results"
 
+      - name: Upload Test Results
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v4.3.0
+        with:
+          retention-days: 1
+          name: test-results-${{ matrix.shardIndex }}
+          path: "apps/ledger-live-desktop/test-results"
+
       - name: Upload Xray Results
         if: ${{ !cancelled() && inputs.export_to_xray }}
         uses: actions/upload-artifact@v4.3.0
