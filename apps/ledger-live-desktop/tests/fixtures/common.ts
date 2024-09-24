@@ -174,12 +174,7 @@ export const test = base.extend<TestFixtures>({
     });
 
     // app is loaded
-    let screenshot = await page.screenshot();
-    await testInfo.attach("Screenshot", { body: screenshot, contentType: "image/png" });
-
     await page.waitForLoadState("domcontentloaded");
-    screenshot = await page.screenshot();
-    await testInfo.attach("Screenshot", { body: screenshot, contentType: "image/png" });
     await page.waitForSelector("#loader-container", { state: "hidden" });
 
     // use page in the test
