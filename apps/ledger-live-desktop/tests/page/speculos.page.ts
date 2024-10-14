@@ -39,9 +39,9 @@ export class SpeculosPage extends AppPage {
     if (!sendPattern) {
       return;
     }
-    const amountScreen = await pressRightUntil(sendPattern[0]);
+    const amountScreen = await pressRightUntil(sendPattern[DeviceLabels.AMOUNT]);
     expect(verifyAmount(tx.amount, amountScreen)).toBe(true);
-    const addressScreen = await pressRightUntil(sendPattern[1]);
+    const addressScreen = await pressRightUntil(sendPattern[DeviceLabels.ADDRESS]);
     expect(assertAddressesEquality(tx.accountToCredit.address, addressScreen)).toBe(true);
     await pressRightUntil(sendPattern[2]);
     await pressBoth();
