@@ -46,18 +46,16 @@
           "enabled": true,
           "params": {
             "variant": "A",
-            "entryPoints": ["Onboarding"]
+            "entryPoints": [
+              "Onboarding"
+            ]
           },
-          "overridesRemote": true
-        },
-        "lldWalletSync": {
-          "enabled": true,
           "overridesRemote": true
         }
       }
     },
     "user": {
-      "id": "08cf3393-c5eb-4ea7-92de-0deea22e3971"
+      "id": "29f142d3-ec06-40f5-8d3a-699f27777bb7"
     },
     "accounts": [],
     "countervalues": {}

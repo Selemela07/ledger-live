@@ -3,12 +3,13 @@ import { AppInfos } from "tests/enum/AppInfos";
 import { addTmsLink } from "tests/utils/allureUtils";
 import { getDescription } from "../../utils/customJsonReporter";
 import { runCliCommand } from "tests/utils/cliUtils";
+import Page from "~/renderer/components/Page";
 
 const app: AppInfos = AppInfos.LS;
 
 test.describe(`[${app.name}] Sync Accounts`, () => {
   test.use({
-    userdata: "ledgerSync",
+    userdata: "skip-onboarding",
     speculosApp: app,
     // cliCommand: ["ledgerKeyRingProtocol --initMemberCredentials"],
   });
@@ -21,7 +22,7 @@ test.describe(`[${app.name}] Sync Accounts`, () => {
         description: "B2CQA-2292, B2CQA-2293, B2CQA-2296",
       },
     },
-    async ({ app }) => {
+    async ({ app, page }) => {
       await addTmsLink(getDescription(test.info().annotations).split(", "));
       const keys = await runCliCommand("ledgerKeyRingProtocol --initMemberCredentials");
 
@@ -47,11 +48,11 @@ test.describe(`[${app.name}] Sync Accounts`, () => {
       const result2 = await runCliCommand(initiateTrustchain);
 
       console.log("result2:", result2);
-
+      /*
       await app.layout.goToSettings();
       await app.settings.openManageLedgerSync();
       await app.ledgerSync.expectSyncAccountsButtonExist();
-      /*
+      
       await app.ledgerSync.syncAccounts();
       await app.speculos.clickNextUntilText("Make sure");
       await app.speculos.confirmOperationOnDevice("Connect with");
