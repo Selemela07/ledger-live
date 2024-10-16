@@ -61,7 +61,7 @@ export const specs: Specs = {
   },
   LedgerSync: {
     appQuery: {
-      model: DeviceModelId.nanoX,
+      model: DeviceModelId.nanoSP,
       appName: "Ledger Sync",
     },
     dependency: "",

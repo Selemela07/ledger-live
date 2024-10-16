@@ -12,7 +12,7 @@ import { launchApp } from "tests/utils/electronUtils";
 import { captureArtifacts } from "tests/utils/allureUtils";
 import { randomUUID } from "crypto";
 import { AppInfos } from "tests/enum/AppInfos";
-import { runCliCommand } from "tests/utils/cliUtils";
+//import { runCliCommand } from "tests/utils/cliUtils";
 
 type TestFixtures = {
   lang: string;
@@ -29,7 +29,7 @@ type TestFixtures = {
   featureFlags: OptionalFeatureMap;
   simulateCamera: string;
   app: Application;
-  cliCommand: string[];
+  //cliCommand: string[];
 };
 
 const IS_NOT_MOCK = process.env.MOCK == "0";
@@ -48,7 +48,7 @@ export const test = base.extend<TestFixtures>({
   featureFlags: undefined,
   simulateCamera: undefined,
   speculosApp: undefined,
-  cliCommand: [],
+  //cliCommand: [],
 
   app: async ({ page }, use) => {
     const app = new Application(page);
@@ -77,7 +77,7 @@ export const test = base.extend<TestFixtures>({
       featureFlags,
       simulateCamera,
       speculosApp,
-      cliCommand,
+      //cliCommand,
     },
     use,
     testInfo,
@@ -112,9 +112,10 @@ export const test = base.extend<TestFixtures>({
         setEnv("SPECULOS_API_PORT", device?.ports.apiPort?.toString());
         process.env.SPECULOS_API_PORT = device?.ports.apiPort;
         process.env.MOCK = "";
+        console.log("Speculos Port:", process.env.SPECULOS_API_PORT);
 
-        const command = `${cliCommand} --appjson ${userdataDestinationPath}/app.json`;
-        await runCliCommand(command);
+        //const command = `${cliCommand} --appjson ${userdataDestinationPath}/app.json`;
+        //await runCliCommand(command);
       }
 
       // default environment variables

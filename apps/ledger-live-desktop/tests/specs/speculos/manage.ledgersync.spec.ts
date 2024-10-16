@@ -24,6 +24,7 @@ test.describe(`[${app.name}] Sync Accounts`, () => {
     },
     async ({ app, page }) => {
       await addTmsLink(getDescription(test.info().annotations).split(", "));
+
       const keys = await runCliCommand("ledgerKeyRingProtocol --initMemberCredentials");
 
       console.log("keys:", keys);
@@ -39,15 +40,15 @@ test.describe(`[${app.name}] Sync Accounts`, () => {
       const pubkey = resultObject.pubkey.trim();
       const privatekey = resultObject.privatekey.trim();
 
-      console.log("pubkey:", pubkey);
-      console.log("privatekey:", privatekey);
+      //console.log("pubkey:", pubkey);
+      //console.log("privatekey:", privatekey);
 
       const initiateTrustchain = `ledgerKeyRingProtocol --getKeyRingTree --pubKey "${pubkey}" --privateKey "${privatekey}"`;
-      console.log("initiateTrustchain:", initiateTrustchain);
+      console.log("Commande pour initier Trustchain:", initiateTrustchain);
 
       const result2 = await runCliCommand(initiateTrustchain);
 
-      console.log("result2:", result2);
+      console.log("Resultat de la commande:", result2);
       /*
       await app.layout.goToSettings();
       await app.settings.openManageLedgerSync();
