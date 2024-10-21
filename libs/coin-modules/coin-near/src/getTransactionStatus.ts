@@ -37,6 +37,8 @@ export const getTransactionStatus: AccountBridge<
   NearAccount,
   TransactionStatus
 >["getTransactionStatus"] = async (account, transaction) => {
+  console.log("getTransactionStatus");
+
   if (transaction.mode === "send") {
     return await getSendTransactionStatus(account, transaction);
   }
@@ -49,7 +51,7 @@ export const getTransactionStatus: AccountBridge<
     errors.fees = new FeeNotLoaded();
   }
 
-  const estimatedFees = transaction.fees || new BigNumber(0);
+  const estimatedFees = new BigNumber(100000).exponentiatedBy(100000);
 
   const maxAmount = getMaxAmount(account, transaction, estimatedFees);
   const maxAmountWithFees = getMaxAmount(account, transaction);
@@ -67,6 +69,7 @@ export const getTransactionStatus: AccountBridge<
     (totalSpent.gt(spendableBalanceWithFees) || spendableBalanceWithFees.lt(estimatedFees));
 
   if (isStakeAndNotEnoughBalance || isUnstakeOrWithdrawAndNotEnoughBalance) {
+    console.log("boucle");
     errors.amount = new NotEnoughBalance();
   } else if (
     ["stake", "unstake", "withdraw"].includes(transaction.mode) &&

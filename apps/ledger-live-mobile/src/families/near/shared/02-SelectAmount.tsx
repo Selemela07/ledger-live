@@ -16,7 +16,7 @@ import type { NearAccount } from "@ledgerhq/live-common/families/near/types";
 import { getAccountBridge } from "@ledgerhq/live-common/bridge/index";
 import { formatCurrencyUnit } from "@ledgerhq/live-common/currencies/index";
 import { useTheme } from "styled-components/native";
-import { accountScreenSelector } from "~/reducers/accounts";
+import { accountScreenSelector, shallowAccountsSelector } from "~/reducers/accounts";
 import Button from "~/components/Button";
 import CurrencyInput from "~/components/CurrencyInput";
 import LText from "~/components/LText";
@@ -24,13 +24,18 @@ import Check from "~/icons/Check";
 import KeyboardView from "~/components/KeyboardView";
 import TranslatedError from "~/components/TranslatedError";
 import { getFirstStatusError } from "../../helpers";
-import { ScreenName } from "~/const";
+import { NavigatorName, ScreenName } from "~/const";
 import type { StackNavigatorProps } from "~/components/RootNavigator/types/helpers";
 import { NearStakingFlowParamList } from "../StakingFlow/types";
 import { NearUnstakingFlowParamList } from "../UnstakingFlow/types";
 import { NearWithdrawingFlowParamList } from "../WithdrawingFlow/types";
 import { useSettings } from "~/hooks";
 import { useAccountUnit } from "~/hooks/useAccountUnit";
+import { getAccountCurrency, getParentAccount } from "@ledgerhq/live-common/account/index";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { track } from "~/analytics";
+import { Alert, Text } from "@ledgerhq/native-ui";
+import { NotEnoughBalance } from "@ledgerhq/errors";
 
 type Props =
   | StackNavigatorProps<NearStakingFlowParamList, ScreenName.NearStakingAmount>
@@ -53,6 +58,7 @@ function StakingAmount({ navigation, route }: Props) {
   const max = useMemo(() => route?.params?.max ?? new BigNumber(0), [route]);
   const remaining = useMemo(() => max.minus(value), [max, value]);
   const { transaction, updateTransaction, bridgePending, status } = route.params;
+
   const onNext = useCallback(() => {
     const tx = route.params.transaction;
 
@@ -82,6 +88,7 @@ function StakingAmount({ navigation, route }: Props) {
       value: max.multipliedBy(ratio).integerValue(),
     })),
   );
+
   const error =
     transaction.amount.eq(0) || bridgePending ? null : getFirstStatusError(status, "errors");
   const warning = getFirstStatusError(status, "warnings");
@@ -91,6 +98,83 @@ function StakingAmount({ navigation, route }: Props) {
   if (Platform.OS === "ios") {
     behaviorParam = "padding";
   }
+
+  enum LinkEnum {
+    Buy = "Buy",
+    Swap = "Swap",
+    Deposit = "Deposit",
+  }
+  type linkType = keyof typeof LinkEnum;
+
+  const trackLinkPress = (type: linkType) => {
+    track("button_clicked", {
+      button: type,
+      asset: currency.name,
+    });
+  };
+
+  const currency = getAccountCurrency(account);
+  const accounts = useSelector(shallowAccountsSelector);
+  const parentAccount = getParentAccount(account, accounts);
+
+  const onNavigate = useCallback(
+    (name: string, options?: object) => {
+      (navigation as StackNavigationProp<{ [key: string]: object | undefined }>).navigate(
+        name,
+        options,
+      );
+    },
+    [navigation],
+  );
+
+  const onLinkPress = (type: linkType) => {
+    trackLinkPress(type);
+    if (type === LinkEnum.Buy) {
+      onNavigate(NavigatorName.Exchange, {
+        screen: ScreenName.ExchangeBuy,
+        params: { defaultCurrencyId: currency?.id },
+      });
+    }
+    if (type === LinkEnum.Swap) {
+      onNavigate(NavigatorName.Swap, {
+        screen: ScreenName.SwapTab,
+        params: { currency },
+      });
+    }
+    if (type === LinkEnum.Deposit) {
+      onNavigate(NavigatorName.ReceiveFunds, {
+        screen: ScreenName.ReceiveConfirmation,
+        params: { accountId: account.id, parentId: parentAccount?.id, currency },
+      });
+    }
+  };
+
+  const LinkText = ({ type }: { type: linkType }) => {
+    return (
+      <Text
+        variant="bodyLineHeight"
+        fontWeight="bold"
+        style={{
+          textDecorationLine: "underline",
+        }}
+        fontSize={14}
+        onPress={() => onLinkPress(type)}
+      />
+    );
+  };
+
+  const errorMessage = {
+    key: `errors.NotEnoughBalanceForUnstaking.near`,
+    values: {
+      currentBalance: formatCurrencyUnit(unit, account.spendableBalance, {
+        showCode: true,
+        locale: locale,
+      }),
+      assetName: unit.code,
+    },
+  };
+
+  const errorDuringUnstaking = error instanceof NotEnoughBalance && transaction.mode === "unstake";
 
   return (
     <View
@@ -158,6 +242,27 @@ function StakingAmount({ navigation, route }: Props) {
                 },
               ]}
             >
+              {errorDuringUnstaking && (
+                <View style={styles.labelContainer}>
+                  <Alert type="error">
+                    <Text
+                      textBreakStrategy="balanced"
+                      variant="bodyLineHeight"
+                      fontSize={14}
+                      flex={1}
+                    >
+                      <Trans
+                        i18nKey={errorMessage.key}
+                        values={errorMessage.values}
+                        components={{
+                          linkBuy: LinkText({ type: LinkEnum.Buy }),
+                          linkDeposit: LinkText({ type: LinkEnum.Deposit }),
+                        }}
+                      />
+                    </Text>
+                  </Alert>
+                </View>
+              )}
               {remaining.isZero() && (
                 <View style={styles.labelContainer}>
                   <Check size={16} color={colors.success.c50} />
@@ -212,7 +317,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 16,
     alignItems: "stretch",
   },
   inputStyle: {

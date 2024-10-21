@@ -149,7 +149,7 @@ function DelegationAmount({ navigation, route }: Props) {
       });
     } else if (tx.mode === "undelegate" && !isNotEnoughBalance) {
       setErrorMessage({
-        key: "errors.NotEnoughBalanceForUnstaking.desc",
+        key: "errors.NotEnoughBalanceForUnstaking.global",
         values: {
           currentBalance: formatCurrencyUnit(unit, account.spendableBalance, {
             showCode: true,
