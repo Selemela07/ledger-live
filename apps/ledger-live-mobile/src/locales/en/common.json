@@ -495,6 +495,9 @@
       "title": "Sorry, insufficient funds",
       "description": "Please make sure the account has enough funds."
     },
+    "NotEnoughBalanceForUnstaking": {
+      "desc": "Your available (non-staked) balance is currently {{currentBalance}} which is insufficient to pay for the network fees to unstake your {{assetName}}. <linkBuy>Buy</linkBuy>, <linkSwap>Swap</linkSwap> or <linkDeposit>Deposit</linkDeposit> {{assetName}} into your account."
+    },
     "NotEnoughBalanceSwap": {
       "title": "Sorry, insufficient balance including network fees. Adjust amount or verify balance.",
       "description": "Please make sure the account has enough funds."
