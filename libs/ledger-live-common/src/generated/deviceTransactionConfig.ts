@@ -1,7 +1,6 @@
 import casper from "../families/casper/deviceTransactionConfig";
 import celo from "../families/celo/deviceTransactionConfig";
 import crypto_org from "../families/crypto_org/deviceTransactionConfig";
-import filecoin from "../families/filecoin/deviceTransactionConfig";
 import hedera from "../families/hedera/deviceTransactionConfig";
 import internet_computer from "../families/internet_computer/deviceTransactionConfig";
 import stacks from "../families/stacks/deviceTransactionConfig";
@@ -25,7 +24,6 @@ export default {
   casper,
   celo,
   crypto_org,
-  filecoin,
   hedera,
   internet_computer,
   stacks,
@@ -46,14 +44,12 @@ export default {
   xrp,
 };
 import { ExtraDeviceTransactionField as ExtraDeviceTransactionField_casper } from "../families/casper/deviceTransactionConfig";
-import { ExtraDeviceTransactionField as ExtraDeviceTransactionField_filecoin } from "../families/filecoin/deviceTransactionConfig";
 import { ExtraDeviceTransactionField as ExtraDeviceTransactionField_stacks } from "../families/stacks/deviceTransactionConfig";
 import { ExtraDeviceTransactionField as ExtraDeviceTransactionField_polkadot } from "@ledgerhq/coin-polkadot/bridge/deviceTransactionConfig";
 import { ExtraDeviceTransactionField as ExtraDeviceTransactionField_tron } from "@ledgerhq/coin-tron/bridge/deviceTransactionConfig";
 
 export type ExtraDeviceTransactionField =
   | ExtraDeviceTransactionField_casper
-  | ExtraDeviceTransactionField_filecoin
   | ExtraDeviceTransactionField_stacks
   | ExtraDeviceTransactionField_polkadot
   | ExtraDeviceTransactionField_tron;

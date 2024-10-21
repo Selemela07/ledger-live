@@ -28,6 +28,7 @@ const familiesWPackage = [
   "cosmos",
   "elrond",
   "evm",
+  "filecoin",
   "icon",
   "near",
   "polkadot",
