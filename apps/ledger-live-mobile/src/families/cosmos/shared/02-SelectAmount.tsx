@@ -1,5 +1,5 @@
 import invariant from "invariant";
-import React, { useCallback, useState, useMemo } from "react";
+import React, { useCallback, useState, useMemo, useEffect } from "react";
 import {
   View,
   StyleSheet,
@@ -17,20 +17,23 @@ import { getMaxEstimatedBalance } from "@ledgerhq/live-common/families/cosmos/lo
 import { getAccountBridge } from "@ledgerhq/live-common/bridge/index";
 import { formatCurrencyUnit } from "@ledgerhq/live-common/currencies/index";
 import { useTheme } from "styled-components/native";
-import { accountScreenSelector } from "~/reducers/accounts";
+import { accountScreenSelector, shallowAccountsSelector } from "~/reducers/accounts";
 import Button from "~/components/Button";
 import CurrencyInput from "~/components/CurrencyInput";
 import LText from "~/components/LText";
-import Warning from "~/icons/Warning";
 import Check from "~/icons/Check";
 import KeyboardView from "~/components/KeyboardView";
-import { ScreenName } from "~/const";
+import { NavigatorName, ScreenName } from "~/const";
 import type { StackNavigatorProps } from "~/components/RootNavigator/types/helpers";
 import type { CosmosDelegationFlowParamList } from "../DelegationFlow/types";
 import type { CosmosRedelegationFlowParamList } from "../RedelegationFlow/types";
 import { CosmosUndelegationFlowParamList } from "../UndelegationFlow/types";
 import { useSettings } from "~/hooks";
 import { useAccountUnit } from "~/hooks/useAccountUnit";
+import { Alert, Text } from "@ledgerhq/native-ui";
+import { track } from "~/analytics";
+import { getAccountCurrency, getParentAccount } from "@ledgerhq/live-common/account/index";
+import { StackNavigationProp } from "@react-navigation/stack";
 
 type Props =
   | StackNavigatorProps<CosmosDelegationFlowParamList, ScreenName.CosmosDelegationAmount>
@@ -125,13 +128,109 @@ function DelegationAmount({ navigation, route }: Props) {
   if (Platform.OS === "ios") {
     behaviorParam = "padding";
   }
+  const [errorMessage, setErrorMessage] = useState<{
+    key: string;
+    values?: { min?: string; max?: string; currentBalance?: string; assetName?: string };
+  }>({
+    key: "cosmos.delegation.flow.steps.amount.incorrectAmount",
+    values: {
+      max: formatCurrencyUnit(unit, initialMax, {
+        showCode: true,
+        showAllDigits: true,
+        locale: locale,
+      }),
+    },
+  });
 
-  const errorMessageKey =
-    isNotEnoughBalance || isAmountOutOfRange
-      ? "errors.NotEnoughBalance.title"
-      : value.gte(min)
-        ? "cosmos.delegation.flow.steps.amount.minAmount"
-        : "cosmos.delegation.flow.steps.amount.incorrectAmount";
+  useEffect(() => {
+    if (isAmountOutOfRange) {
+      setErrorMessage({
+        key: "errors.NotEnoughBalance.title",
+      });
+    } else if (tx.mode === "undelegate" && !isNotEnoughBalance) {
+      setErrorMessage({
+        key: "errors.NotEnoughBalanceForUnstaking.desc",
+        values: {
+          currentBalance: formatCurrencyUnit(unit, account.spendableBalance, {
+            showCode: true,
+            showAllDigits: true,
+            locale: locale,
+          }),
+          assetName: unit.code,
+        },
+      });
+    } else if (value.gte(min)) {
+      setErrorMessage({
+        key: "cosmos.delegation.flow.steps.amount.minAmount",
+        values: {
+          min: formatCurrencyUnit(unit, min, {
+            showCode: true,
+            showAllDigits: true,
+            locale: locale,
+          }),
+        },
+      });
+    }
+  }, [
+    tx.mode,
+    isNotEnoughBalance,
+    isAmountOutOfRange,
+    value,
+    min,
+    unit,
+    account.spendableBalance,
+    locale,
+  ]);
+
+  enum LinkEnum {
+    Buy = "Buy",
+    Swap = "Swap",
+    Deposit = "Deposit",
+  }
+  type linkType = keyof typeof LinkEnum;
+
+  const trackLinkPress = (type: linkType) => {
+    track("button_clicked", {
+      button: type,
+      asset: currency.name,
+    });
+  };
+
+  const currency = getAccountCurrency(account);
+  const accounts = useSelector(shallowAccountsSelector);
+  const parentAccount = getParentAccount(account, accounts);
+
+  const onNavigate = useCallback(
+    (name: string, options?: object) => {
+      (navigation as StackNavigationProp<{ [key: string]: object | undefined }>).navigate(
+        name,
+        options,
+      );
+    },
+    [navigation],
+  );
+
+  const onLinkPress = (type: linkType) => {
+    trackLinkPress(type);
+    if (type === LinkEnum.Buy) {
+      onNavigate(NavigatorName.Exchange, {
+        screen: ScreenName.ExchangeBuy,
+        params: { defaultCurrencyId: currency?.id },
+      });
+    }
+    if (type === LinkEnum.Swap) {
+      onNavigate(NavigatorName.Swap, {
+        screen: ScreenName.SwapTab,
+        params: { currency },
+      });
+    }
+    if (type === LinkEnum.Deposit) {
+      onNavigate(NavigatorName.ReceiveFunds, {
+        screen: ScreenName.ReceiveConfirmation,
+        params: { accountId: account.id, parentId: parentAccount?.id, currency },
+      });
+    }
+  };
 
   return (
     <View
@@ -194,26 +293,42 @@ function DelegationAmount({ navigation, route }: Props) {
             >
               {(isNotEnoughBalance || (isAmountOutOfRange && !value.eq(0))) && (
                 <View style={styles.labelContainer}>
-                  <Warning size={16} color={colors.error.c50} />
-                  <LText style={[styles.assetsRemaining]} color={colors.error.c50}>
-                    <Trans
-                      i18nKey={errorMessageKey}
-                      values={{
-                        min: formatCurrencyUnit(unit, min, {
-                          showCode: true,
-                          showAllDigits: true,
-                          locale: locale,
-                        }),
-                        max: formatCurrencyUnit(unit, initialMax, {
-                          showCode: true,
-                          showAllDigits: true,
-                          locale: locale,
-                        }),
-                      }}
+                  <Alert type="error">
+                    <Text
+                      textBreakStrategy="balanced"
+                      variant="bodyLineHeight"
+                      fontSize={14}
+                      flex={1}
                     >
-                      <LText semiBold>{""}</LText>
-                    </Trans>
-                  </LText>
+                      <Trans
+                        i18nKey={errorMessage.key}
+                        values={errorMessage.values}
+                        components={{
+                          linkBuy: (
+                            <Text
+                              fontWeight="bold"
+                              style={{ textDecorationLine: "underline" }}
+                              onPress={() => onLinkPress(LinkEnum.Buy)}
+                            />
+                          ),
+                          linkSwap: (
+                            <Text
+                              fontWeight="bold"
+                              style={{ textDecorationLine: "underline" }}
+                              onPress={() => onLinkPress(LinkEnum.Swap)}
+                            />
+                          ),
+                          linkDeposit: (
+                            <Text
+                              fontWeight="bold"
+                              style={{ textDecorationLine: "underline" }}
+                              onPress={() => onLinkPress(LinkEnum.Deposit)}
+                            />
+                          ),
+                        }}
+                      ></Trans>
+                    </Text>
+                  </Alert>
                 </View>
               )}
               {max.isZero() && (
@@ -292,7 +407,6 @@ const styles = StyleSheet.create({
   },
   container: {
     flex: 1,
-    paddingHorizontal: 16,
     alignItems: "stretch",
   },
   inputStyle: {
@@ -336,7 +450,7 @@ const styles = StyleSheet.create({
   assetsRemaining: {
     fontSize: 14,
     textAlign: "center",
-    lineHeight: 32,
+    lineHeight: 21,
     paddingHorizontal: 10,
   },
   small: {
