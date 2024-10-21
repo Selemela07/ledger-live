@@ -367,7 +367,7 @@ export function scan(arg: ScanCommonOpts): Observable<Account> {
         }),
       ).pipe(
         filter((e: any) => {
-          if (!!scheme) {
+          if (scheme) {
             return (
               e.type === "discovered" || asDerivationMode(scheme) !== e?.account?.derivationMode
             );
