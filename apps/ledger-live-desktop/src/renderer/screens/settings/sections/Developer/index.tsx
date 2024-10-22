@@ -26,6 +26,8 @@ import SimpleHashTools from "./SimpleHashTools/SimpleHashTools";
 import MockAppUpdate from "./MockAppUpdate";
 import EnableAnalyticsConsole from "./EnableAnalyticsConsole";
 import BrazeTools from "./BrazeTools";
+import { captureException } from "~/sentry/renderer";
+import Button from "~/renderer/components/Button";
 
 const Default = () => {
   const { t } = useTranslation();
@@ -118,6 +120,16 @@ const Default = () => {
           <AllowDebugReactQueryToggle />
         </Row>
       )}
+      <Row title={"Test Sentry"} desc={"Force the app to crash to trigger an event in Sentry"}>
+        <Button
+          onClick={() => {
+            captureException(new Error("Test Sentry by forcing a crash"));
+          }}
+          primary
+        >
+          Crash
+        </Button>
+      </Row>
     </Body>
   );
 };
