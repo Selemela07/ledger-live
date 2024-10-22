@@ -19,6 +19,7 @@ import stellar from "@ledgerhq/coin-stellar/specs";
 import tezos from "@ledgerhq/coin-tezos/specs";
 import ton from "@ledgerhq/coin-ton/specs";
 import tron from "@ledgerhq/coin-tron/specs";
+import vechain from "@ledgerhq/coin-vechain/specs";
 import xrp from "@ledgerhq/coin-xrp/specs";
 
 export default {
@@ -43,5 +44,6 @@ export default {
   tezos,
   ton,
   tron,
+  vechain,
   xrp,
 };
