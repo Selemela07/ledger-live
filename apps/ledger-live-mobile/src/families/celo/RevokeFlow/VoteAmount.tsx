@@ -15,9 +15,9 @@ import invariant from "invariant";
 import { useTheme } from "@react-navigation/native";
 import { getAccountBridge } from "@ledgerhq/live-common/bridge/index";
 import { Transaction as CeloTransaction } from "@ledgerhq/live-common/families/celo/types";
-import { accountScreenSelector } from "~/reducers/accounts";
-import { ScreenName } from "~/const";
-import { TrackScreen } from "~/analytics";
+import { accountScreenSelector, shallowAccountsSelector } from "~/reducers/accounts";
+import { NavigatorName, ScreenName } from "~/const";
+import { track, TrackScreen } from "~/analytics";
 import LText from "~/components/LText";
 import CurrencyUnitValue from "~/components/CurrencyUnitValue";
 import Button from "~/components/Button";
@@ -29,12 +29,19 @@ import { getFirstStatusError } from "../../helpers";
 import type { BaseComposite, StackNavigatorProps } from "~/components/RootNavigator/types/helpers";
 import { CeloRevokeFlowFlowParamList } from "./types";
 import { useAccountUnit } from "~/hooks/useAccountUnit";
+import { NotEnoughBalance } from "@ledgerhq/errors";
+import { Alert, Text } from "@ledgerhq/native-ui";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { getAccountCurrency, getParentAccount } from "@ledgerhq/live-common/account/index";
+import { formatCurrencyUnit } from "@ledgerhq/live-common/currencies/index";
+import { useSettings } from "~/hooks";
 
 type Props = BaseComposite<
   StackNavigatorProps<CeloRevokeFlowFlowParamList, ScreenName.CeloRevokeAmount>
 >;
 
 export default function VoteAmount({ navigation, route }: Props) {
+  const { locale } = useSettings();
   const { colors } = useTheme();
   const { account } = useSelector(accountScreenSelector(route));
 
@@ -89,6 +96,16 @@ export default function VoteAmount({ navigation, route }: Props) {
     });
   };
 
+  const onNavigate = useCallback(
+    (name: string, options?: object) => {
+      (navigation as StackNavigationProp<{ [key: string]: object | undefined }>).navigate(
+        name,
+        options,
+      );
+    },
+    [navigation],
+  );
+
   const blur = useCallback(() => Keyboard.dismiss(), []);
 
   const { useAllAmount } = transaction;
@@ -96,6 +113,72 @@ export default function VoteAmount({ navigation, route }: Props) {
   const unit = useAccountUnit(account);
   const error = amount.eq(0) || bridgePending ? null : getFirstStatusError(status, "errors");
   const warning = getFirstStatusError(status, "warnings");
+  const isRevoking = transaction.mode === "revoke";
+  const isRevokingWithFeesError = isRevoking && error instanceof NotEnoughBalance;
+
+  const errorMessage = {
+    key: "errors.NotEnoughBalanceForUnstaking.noSwap",
+    values: {
+      currentBalance: formatCurrencyUnit(unit, account.spendableBalance, {
+        showCode: true,
+        locale: locale,
+      }),
+      assetName: unit.code,
+    },
+  };
+
+  enum LinkEnum {
+    Buy = "Buy",
+    Swap = "Swap",
+    Deposit = "Deposit",
+  }
+
+  type linkType = keyof typeof LinkEnum;
+
+  const currency = getAccountCurrency(account);
+  const accounts = useSelector(shallowAccountsSelector);
+  const parentAccount = getParentAccount(account, accounts);
+
+  const trackLinkPress = (type: linkType) => {
+    track("button_clicked", {
+      button: type,
+      asset: currency.name,
+    });
+  };
+
+  const onLinkPress = (type: linkType) => {
+    trackLinkPress(type);
+    if (type === LinkEnum.Buy) {
+      onNavigate(NavigatorName.Exchange, {
+        screen: ScreenName.ExchangeBuy,
+        params: { defaultCurrencyId: currency?.id },
+      });
+    }
+    if (type === LinkEnum.Swap) {
+      onNavigate(NavigatorName.Swap, {
+        screen: ScreenName.SwapTab,
+        params: { currency },
+      });
+    }
+    if (type === LinkEnum.Deposit) {
+      onNavigate(NavigatorName.ReceiveFunds, {
+        screen: ScreenName.ReceiveConfirmation,
+        params: { accountId: account.id, parentId: parentAccount?.id, currency },
+      });
+    }
+  };
+
+  const LinkText = ({ type }: { type: linkType }) => {
+    return (
+      <Text
+        variant="bodyLineHeight"
+        fontWeight="bold"
+        style={{ textDecorationLine: "underline" }}
+        fontSize={14}
+        onPress={() => onLinkPress(type)}
+      />
+    );
+  };
 
   return (
     <>
@@ -144,6 +227,25 @@ export default function VoteAmount({ navigation, route }: Props) {
                 </LText>
               </View>
               <View style={styles.bottomWrapper}>
+                {isRevokingWithFeesError && (
+                  <Alert type="error">
+                    <Text
+                      textBreakStrategy="balanced"
+                      variant="bodyLineHeight"
+                      fontSize={14}
+                      flex={1}
+                    >
+                      <Trans
+                        i18nKey={errorMessage.key}
+                        values={errorMessage.values}
+                        components={{
+                          linkBuy: LinkText({ type: LinkEnum.Buy }),
+                          linkDeposit: LinkText({ type: LinkEnum.Deposit }),
+                        }}
+                      />
+                    </Text>
+                  </Alert>
+                )}
                 <View style={styles.available}>
                   <View style={styles.availableLeft}>
                     <LText>
@@ -231,6 +333,7 @@ const styles = StyleSheet.create({
     alignItems: "stretch",
     justifyContent: "flex-end",
     flexShrink: 1,
+    gap: 12,
   },
   continueWrapper: {
     alignSelf: "stretch",

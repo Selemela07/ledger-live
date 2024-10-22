@@ -142,6 +142,10 @@ function DelegationAmount({ navigation, route }: Props) {
     },
   });
 
+  const currency = getAccountCurrency(account);
+  const accounts = useSelector(shallowAccountsSelector);
+  const parentAccount = getParentAccount(account, accounts);
+
   useEffect(() => {
     if (isAmountOutOfRange) {
       setErrorMessage({
@@ -149,7 +153,7 @@ function DelegationAmount({ navigation, route }: Props) {
       });
     } else if (tx.mode === "undelegate" && !isNotEnoughBalance) {
       setErrorMessage({
-        key: "errors.NotEnoughBalanceForUnstaking.global",
+        key: "errors.NotEnoughBalanceForUnstaking.noSwap", // will need to be replaced by .global after checking if the coin can be swapped
         values: {
           currentBalance: formatCurrencyUnit(unit, account.spendableBalance, {
             showCode: true,
@@ -179,6 +183,7 @@ function DelegationAmount({ navigation, route }: Props) {
     unit,
     account.spendableBalance,
     locale,
+    currency.id,
   ]);
 
   enum LinkEnum {
@@ -194,10 +199,6 @@ function DelegationAmount({ navigation, route }: Props) {
       asset: currency.name,
     });
   };
-
-  const currency = getAccountCurrency(account);
-  const accounts = useSelector(shallowAccountsSelector);
-  const parentAccount = getParentAccount(account, accounts);
 
   const onNavigate = useCallback(
     (name: string, options?: object) => {

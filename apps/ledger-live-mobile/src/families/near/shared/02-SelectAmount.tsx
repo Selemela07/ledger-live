@@ -164,7 +164,7 @@ function StakingAmount({ navigation, route }: Props) {
   };
 
   const errorMessage = {
-    key: `errors.NotEnoughBalanceForUnstaking.near`,
+    key: `errors.NotEnoughBalanceForUnstaking.noSwap`,
     values: {
       currentBalance: formatCurrencyUnit(unit, account.spendableBalance, {
         showCode: true,
