@@ -34,6 +34,7 @@ import { Alert, Text } from "@ledgerhq/native-ui";
 import { track } from "~/analytics";
 import { getAccountCurrency, getParentAccount } from "@ledgerhq/live-common/account/index";
 import { StackNavigationProp } from "@react-navigation/stack";
+import { useFetchCurrencyAll } from "@ledgerhq/live-common/exchange/swap/hooks/index";
 
 type Props =
   | StackNavigatorProps<CosmosDelegationFlowParamList, ScreenName.CosmosDelegationAmount>
@@ -47,6 +48,8 @@ function DelegationAmount({ navigation, route }: Props) {
   const { colors } = useTheme();
   const { account } = useSelector(accountScreenSelector(route));
   const { locale } = useSettings();
+  const { data: currenciesAll } = useFetchCurrencyAll();
+
   invariant(
     account && (account as CosmosAccount).cosmosResources && route.params.transaction,
     "account and cosmos transaction required",
@@ -145,6 +148,7 @@ function DelegationAmount({ navigation, route }: Props) {
   const currency = getAccountCurrency(account);
   const accounts = useSelector(shallowAccountsSelector);
   const parentAccount = getParentAccount(account, accounts);
+  const availableOnSwap = currency && currenciesAll.includes(currency.id);
 
   useEffect(() => {
     if (isAmountOutOfRange) {
@@ -153,7 +157,9 @@ function DelegationAmount({ navigation, route }: Props) {
       });
     } else if (tx.mode === "undelegate" && !isNotEnoughBalance) {
       setErrorMessage({
-        key: "errors.NotEnoughBalanceForUnstaking.noSwap", // will need to be replaced by .global after checking if the coin can be swapped
+        key: availableOnSwap
+          ? "errors.NotEnoughBalanceForUnstaking.global"
+          : "errors.NotEnoughBalanceForUnstaking.noSwap",
         values: {
           currentBalance: formatCurrencyUnit(unit, account.spendableBalance, {
             showCode: true,
@@ -184,6 +190,7 @@ function DelegationAmount({ navigation, route }: Props) {
     account.spendableBalance,
     locale,
     currency.id,
+    availableOnSwap,
   ]);
 
   enum LinkEnum {
@@ -303,7 +310,7 @@ function DelegationAmount({ navigation, route }: Props) {
                 },
               ]}
             >
-              {(isNotEnoughBalance || (isAmountOutOfRange && !value.eq(0))) && (
+              {(!isNotEnoughBalance || (isAmountOutOfRange && !value.eq(0))) && (
                 <View style={styles.labelContainer}>
                   <Alert type="error">
                     <Text

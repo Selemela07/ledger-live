@@ -11,7 +11,7 @@ import {
   ValidatorsAppValidator,
 } from "@ledgerhq/live-common/families/solana/staking";
 import { AccountLike } from "@ledgerhq/types-live";
-import { Text } from "@ledgerhq/native-ui";
+import { Alert, Text } from "@ledgerhq/native-ui";
 import { useTheme } from "@react-navigation/native";
 import { BigNumber } from "bignumber.js";
 import invariant from "invariant";
@@ -22,14 +22,14 @@ import { Animated, StyleSheet, View, TextStyle, StyleProp } from "react-native";
 import { SafeAreaView } from "react-native-safe-area-context";
 import Icon from "react-native-vector-icons/Feather";
 import { useSelector } from "react-redux";
-import { TrackScreen } from "~/analytics";
+import { track, TrackScreen } from "~/analytics";
 import { rgba } from "../../../colors";
 import Button from "~/components/Button";
 import Circle from "~/components/Circle";
 import CurrencyIcon from "~/components/CurrencyIcon";
 import CurrencyUnitValue from "~/components/CurrencyUnitValue";
 import Touchable from "~/components/Touchable";
-import { ScreenName } from "~/const";
+import { NavigatorName, ScreenName } from "~/const";
 import { accountScreenSelector } from "~/reducers/accounts";
 import DelegatingContainer from "../../tezos/DelegatingContainer";
 import ValidatorImage from "../shared/ValidatorImage";
@@ -37,6 +37,9 @@ import { StackNavigatorProps } from "~/components/RootNavigator/types/helpers";
 import { DelegationAction, SolanaDelegationFlowParamList } from "./types";
 import TranslatedError from "../../../components/TranslatedError";
 import { useAccountUnit } from "~/hooks/useAccountUnit";
+import { NotEnoughBalance } from "@ledgerhq/errors";
+import { useSettings } from "~/hooks";
+import { StackNavigationProp } from "@react-navigation/stack";
 
 type Props = StackNavigatorProps<SolanaDelegationFlowParamList, ScreenName.DelegationSummary>;
 
@@ -44,6 +47,8 @@ export default function DelegationSummary({ navigation, route }: Props) {
   const { delegationAction, validator } = route.params;
   const { colors } = useTheme();
   const { account, parentAccount } = useSelector(accountScreenSelector(route));
+  const unit = useAccountUnit(account as AccountLike);
+  const { locale } = useSettings();
 
   invariant(delegationAction, "delegation action must be defined");
   invariant(account, "account must be defined");
@@ -163,6 +168,80 @@ export default function DelegationSummary({ navigation, route }: Props) {
 
   const hasErrors = Object.keys(status.errors).length > 0;
   const error = Object.values(status.errors)[0];
+  const feeError = status.errors.fee;
+  const isUndelagating = transaction.model.kind === "stake.undelegate";
+  const hasErrorWhileDesactivating = isUndelagating && feeError instanceof NotEnoughBalance;
+
+  enum LinkEnum {
+    Buy = "Buy",
+    Swap = "Swap",
+    Deposit = "Deposit",
+  }
+  type linkType = keyof typeof LinkEnum;
+
+  const trackLinkPress = (type: linkType) => {
+    track("button_clicked", {
+      button: type,
+      asset: currency.name,
+    });
+  };
+
+  const onNavigate = useCallback(
+    (name: string, options?: object) => {
+      (navigation as StackNavigationProp<{ [key: string]: object | undefined }>).navigate(
+        name,
+        options,
+      );
+    },
+    [navigation],
+  );
+
+  const onLinkPress = (type: linkType) => {
+    trackLinkPress(type);
+    if (type === LinkEnum.Buy) {
+      onNavigate(NavigatorName.Exchange, {
+        screen: ScreenName.ExchangeBuy,
+        params: { defaultCurrencyId: currency?.id },
+      });
+    }
+    if (type === LinkEnum.Swap) {
+      onNavigate(NavigatorName.Swap, {
+        screen: ScreenName.SwapTab,
+        params: { currency },
+      });
+    }
+    if (type === LinkEnum.Deposit) {
+      onNavigate(NavigatorName.ReceiveFunds, {
+        screen: ScreenName.ReceiveConfirmation,
+        params: { accountId: account.id, parentId: parentAccount?.id, currency },
+      });
+    }
+  };
+
+  const errorMessage = {
+    key: `errors.NotEnoughBalanceForUnstaking.global`,
+    values: {
+      currentBalance: formatCurrencyUnit(unit, account.spendableBalance, {
+        showCode: true,
+        locale: locale,
+      }),
+      assetName: unit.code,
+    },
+  };
+
+  const LinkText = ({ type }: { type: linkType }) => {
+    return (
+      <Text
+        variant="bodyLineHeight"
+        fontWeight="bold"
+        style={{
+          textDecorationLine: "underline",
+        }}
+        fontSize={14}
+        onPress={() => onLinkPress(type)}
+      />
+    );
+  };
 
   return (
     <SafeAreaView style={[styles.root, { backgroundColor: colors.background }]}>
@@ -173,7 +252,6 @@ export default function DelegationSummary({ navigation, route }: Props) {
         action="delegation"
         currency="sol"
       />
-
       <View style={styles.body}>
         <DelegatingContainer
           undelegation={undelegation(delegationAction)}
@@ -227,7 +305,23 @@ export default function DelegationSummary({ navigation, route }: Props) {
         </View>
       </View>
       <View style={styles.footer}>
-        <TranslatedError error={error} />
+        {hasErrorWhileDesactivating ? (
+          <Alert type="error">
+            <Text textBreakStrategy="balanced" variant="bodyLineHeight" fontSize={14} flex={1}>
+              <Trans
+                i18nKey={errorMessage.key}
+                values={errorMessage.values}
+                components={{
+                  linkBuy: LinkText({ type: LinkEnum.Buy }),
+                  linkSwap: LinkText({ type: LinkEnum.Swap }),
+                  linkDeposit: LinkText({ type: LinkEnum.Deposit }),
+                }}
+              />
+            </Text>
+          </Alert>
+        ) : (
+          <TranslatedError error={error} />
+        )}
         <Button
           event="SummaryContinue"
           type="primary"
