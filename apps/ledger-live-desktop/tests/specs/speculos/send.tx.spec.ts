@@ -150,6 +150,16 @@ const transactionE2E = [
     transaction: new Transaction(Account.DOGE_1, Account.DOGE_2, "0.01", Fee.SLOW),
     xrayTicket: "B2CQA-2573",
   },
+  //add Bitcoin Cash - 0.0001 bch / send
+  //add Polkadot - 0.00001 dot / send
+  //add Algorand - 0.001 algo / send
+  //add Solana - 0.000001 sol/ send
+  //add Tron - 0.01 trx / send - fees: 1.1
+  //add Ripple
+  //add Stellar
+  //add Cosmos
+  //add Cardano
+  //add Polygon
 ];
 
 const tokenTransactionInvalid = [
