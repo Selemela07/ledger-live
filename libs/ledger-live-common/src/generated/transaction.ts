@@ -11,6 +11,7 @@ import cardano from "@ledgerhq/coin-cardano/transaction";
 import cosmos from "@ledgerhq/coin-cosmos/transaction";
 import elrond from "@ledgerhq/coin-elrond/transaction";
 import evm from "@ledgerhq/coin-evm/transaction";
+import filecoin from "@ledgerhq/coin-filecoin/transaction";
 import icon from "@ledgerhq/coin-icon/transaction";
 import near from "@ledgerhq/coin-near/transaction";
 import polkadot from "@ledgerhq/coin-polkadot/transaction";
@@ -35,6 +36,7 @@ export default {
   cosmos,
   elrond,
   evm,
+  filecoin,
   icon,
   near,
   polkadot,

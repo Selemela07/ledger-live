@@ -9,6 +9,7 @@ import { cliTools as cardano } from "../families/cardano/setup";
 import { cliTools as cosmos } from "../families/cosmos/setup";
 import { cliTools as elrond } from "../families/elrond/setup";
 import { cliTools as evm } from "../families/evm/setup";
+import { cliTools as filecoin } from "../families/filecoin/setup";
 import { cliTools as icon } from "../families/icon/setup";
 import { cliTools as near } from "../families/near/setup";
 import { cliTools as polkadot } from "../families/polkadot/setup";
@@ -31,6 +32,7 @@ export default {
   cosmos,
   elrond,
   evm,
+  filecoin,
   icon,
   near,
   polkadot,

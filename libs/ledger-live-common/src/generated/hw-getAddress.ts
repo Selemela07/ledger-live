@@ -11,6 +11,7 @@ import { resolver as cardano } from "../families/cardano/setup";
 import { resolver as cosmos } from "../families/cosmos/setup";
 import { resolver as elrond } from "../families/elrond/setup";
 import { resolver as evm } from "../families/evm/setup";
+import { resolver as filecoin } from "../families/filecoin/setup";
 import { resolver as icon } from "../families/icon/setup";
 import { resolver as near } from "../families/near/setup";
 import { resolver as polkadot } from "../families/polkadot/setup";
@@ -35,6 +36,7 @@ export default {
   cosmos,
   elrond,
   evm,
+  filecoin,
   icon,
   near,
   polkadot,
