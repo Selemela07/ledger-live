@@ -15,11 +15,11 @@ import { Trans } from "react-i18next";
 import { useTheme } from "@react-navigation/native";
 import type { Transaction as PolkadotTransaction } from "@ledgerhq/live-common/families/polkadot/types";
 import { useDebounce } from "@ledgerhq/live-common/hooks/useDebounce";
-import { getMainAccount } from "@ledgerhq/live-common/account/index";
+import { getAccountCurrency, getMainAccount } from "@ledgerhq/live-common/account/index";
 import { getAccountBridge } from "@ledgerhq/live-common/bridge/index";
 import { accountScreenSelector } from "~/reducers/accounts";
-import { ScreenName } from "~/const";
-import { TrackScreen } from "~/analytics";
+import { NavigatorName, ScreenName } from "~/const";
+import { track, TrackScreen } from "~/analytics";
 import LText from "~/components/LText";
 import CurrencyUnitValue from "~/components/CurrencyUnitValue";
 import Button from "~/components/Button";
@@ -32,11 +32,17 @@ import SendRowsFee from "../SendRowsFee";
 import type { StackNavigatorProps } from "~/components/RootNavigator/types/helpers";
 import { PolkadotUnbondFlowParamList } from "./type";
 import { useMaybeAccountUnit } from "~/hooks/useAccountUnit";
+import { NotEnoughBalance } from "@ledgerhq/errors";
+import { StackNavigationProp } from "@react-navigation/stack";
+import { Alert, Text } from "@ledgerhq/native-ui";
+import { formatCurrencyUnit } from "@ledgerhq/live-common/currencies/index";
+import { useSettings } from "~/hooks";
 
 type Props = StackNavigatorProps<PolkadotUnbondFlowParamList, ScreenName.PolkadotUnbondAmount>;
 
 export default function PolkadotUnbondAmount({ navigation, route }: Props) {
   const { colors } = useTheme();
+  const { locale } = useSettings();
   const { account, parentAccount } = useSelector(accountScreenSelector(route));
   invariant(account, "account is required");
   const bridge = getAccountBridge(account, parentAccount);
@@ -102,6 +108,15 @@ export default function PolkadotUnbondAmount({ navigation, route }: Props) {
       status,
     });
   }, [account, navigation, transaction, status]);
+  const onNavigate = useCallback(
+    (name: string, options?: object) => {
+      (navigation as StackNavigationProp<{ [key: string]: object | undefined }>).navigate(
+        name,
+        options,
+      );
+    },
+    [navigation],
+  );
   const blur = useCallback(() => Keyboard.dismiss(), []);
   const unit = useMaybeAccountUnit(account);
   if (!account || !transaction || !unit) return null;
@@ -110,6 +125,72 @@ export default function PolkadotUnbondAmount({ navigation, route }: Props) {
   const error = amount.eq(0) || bridgePending ? null : getFirstStatusError(status, "errors");
   const warning = getFirstStatusError(status, "warnings");
   const hasErrors = hasStatusError(status);
+
+  const isUnbonding = transaction.mode === "unbond";
+  const hasErrorDuringUnbonding = error instanceof NotEnoughBalance && isUnbonding;
+
+  const errorMessage = {
+    key: `errors.NotEnoughBalanceForUnstaking.global`,
+    values: {
+      currentBalance: formatCurrencyUnit(unit, account.spendableBalance, {
+        showCode: true,
+        locale: locale,
+      }),
+      assetName: unit.code,
+    },
+  };
+
+  enum LinkEnum {
+    Buy = "Buy",
+    Swap = "Swap",
+    Deposit = "Deposit",
+  }
+
+  type linkType = keyof typeof LinkEnum;
+
+  const currency = getAccountCurrency(account);
+
+  const trackLinkPress = (type: linkType) => {
+    track("button_clicked", {
+      button: type,
+      asset: currency.name,
+    });
+  };
+
+  const onLinkPress = (type: linkType) => {
+    trackLinkPress(type);
+    if (type === LinkEnum.Buy) {
+      onNavigate(NavigatorName.Exchange, {
+        screen: ScreenName.ExchangeBuy,
+        params: { defaultCurrencyId: currency?.id },
+      });
+    }
+    if (type === LinkEnum.Swap) {
+      onNavigate(NavigatorName.Swap, {
+        screen: ScreenName.SwapTab,
+        params: { currency },
+      });
+    }
+    if (type === LinkEnum.Deposit) {
+      onNavigate(NavigatorName.ReceiveFunds, {
+        screen: ScreenName.ReceiveConfirmation,
+        params: { accountId: account.id, parentId: parentAccount?.id, currency },
+      });
+    }
+  };
+
+  const LinkText = ({ type }: { type: linkType }) => {
+    return (
+      <Text
+        variant="bodyLineHeight"
+        fontWeight="bold"
+        style={{ textDecorationLine: "underline" }}
+        fontSize={14}
+        onPress={() => onLinkPress(type)}
+      />
+    );
+  };
+
   return (
     <>
       <TrackScreen
@@ -168,6 +249,26 @@ export default function PolkadotUnbondAmount({ navigation, route }: Props) {
                 </LText>
               </View>
               <View style={styles.bottomWrapper}>
+                {hasErrorDuringUnbonding && (
+                  <Alert type="error">
+                    <Text
+                      textBreakStrategy="balanced"
+                      variant="bodyLineHeight"
+                      fontSize={14}
+                      flex={1}
+                    >
+                      <Trans
+                        i18nKey={errorMessage.key}
+                        values={errorMessage.values}
+                        components={{
+                          linkBuy: LinkText({ type: LinkEnum.Buy }),
+                          linkSwap: LinkText({ type: LinkEnum.Swap }),
+                          linkDeposit: LinkText({ type: LinkEnum.Deposit }),
+                        }}
+                      />
+                    </Text>
+                  </Alert>
+                )}
                 <View style={styles.available}>
                   <View style={styles.availableLeft}>
                     <LText>
@@ -213,15 +314,16 @@ export default function PolkadotUnbondAmount({ navigation, route }: Props) {
           </TouchableWithoutFeedback>
         </KeyboardView>
       </SafeAreaView>
-
-      <FlowErrorBottomModal
-        navigation={navigation}
-        transaction={transaction as PolkadotTransaction}
-        account={account}
-        parentAccount={parentAccount}
-        setTransaction={setTransaction}
-        bridgeError={bridgeError}
-      />
+      {!hasErrorDuringUnbonding && (
+        <FlowErrorBottomModal
+          navigation={navigation}
+          transaction={transaction as PolkadotTransaction}
+          account={account}
+          parentAccount={parentAccount}
+          setTransaction={setTransaction}
+          bridgeError={bridgeError}
+        />
+      )}
     </>
   );
 }
@@ -261,6 +363,7 @@ const styles = StyleSheet.create({
     flexGrow: 0,
     alignItems: "stretch",
     justifyContent: "flex-end",
+    gap: 12,
     flexShrink: 1,
   },
   continueWrapper: {
