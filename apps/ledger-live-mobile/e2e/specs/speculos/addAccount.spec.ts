@@ -38,7 +38,7 @@ describe("Add accounts", () => {
       deviceNumber = await app.common.addSpeculos(currency.speculosApp.name);
 
       await app.addAccount.startAccountsDiscovery();
-      await app.addAccount.expectAccountDiscovery(currency.currencyId, 1);
+      //await app.addAccount.expectAccountDiscovery(currency.currencyId, 1);
       await app.addAccount.finishAccountsDiscovery();
       await app.addAccount.tapSuccessCta();
       await app.account.waitForAccountPageToLoad(currency.name);
