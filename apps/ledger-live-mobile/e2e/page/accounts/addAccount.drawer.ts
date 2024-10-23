@@ -1,12 +1,21 @@
 import { expect } from "detox";
-import { getElementById, openDeeplink, tapById, waitForElementById } from "../../helpers";
+import {
+  getElementById,
+  openDeeplink,
+  scrollToId,
+  tapById,
+  waitForElementById,
+} from "../../helpers";
 import { capitalize } from "../../models/currencies";
+import { getEnv } from "@ledgerhq/live-env";
 
 const baseLink = "add-account";
+const isMock = getEnv("MOCK");
 
 export default class AddAccountDrawer {
-  accountCardId = (id: string) => getElementById(`account-card-${id}`);
-  accountId = (currency: string, index: number) => `mock:1:${currency}:MOCK_${currency}_${index}:`;
+  accountCardId = (id: string | RegExp) => getElementById(new RegExp(`account-card-${id}`));
+  accountId = (currency: string, index: number) =>
+    isMock ? `mock:1:${currency}:MOCK_${currency}_${index}:` : `js:2:${currency}:xpub.*`;
   accountTitleId = (accountName: string) => getElementById(`test-id-account-${accountName}`);
   modalButtonId = "add-accounts-modal-add-button";
   currencyRow = (currencyId: string) => `currency-row-${currencyId}`;
@@ -24,7 +33,7 @@ export default class AddAccountDrawer {
 
   async selectCurrency(currencyId: string) {
     const id = this.currencyRow(currencyId);
-    await waitForElementById(id);
+    await scrollToId(id);
     await tapById(id);
   }
 
