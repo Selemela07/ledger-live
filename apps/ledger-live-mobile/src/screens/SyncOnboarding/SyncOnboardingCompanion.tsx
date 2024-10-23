@@ -378,11 +378,14 @@ export const SyncOnboardingCompanion: React.FC<SyncOnboardingCompanionProps> = (
       } else if (
         deviceOnboardingState?.currentOnboardingStep === DeviceOnboardingStep.WelcomeScreen1
       ) {
-        // switch to the apps step
-        __DEV__
-          ? setCompanionStepKey(CompanionStepKey.Backup) // for ease of testing in dev mode without having to reset the device
-          : setCompanionStepKey(CompanionStepKey.Apps);
-
+        if (recoverUpsellRedirection) {
+          // switch to the apps step
+          __DEV__
+            ? setCompanionStepKey(CompanionStepKey.Backup) // for ease of testing in dev mode without having to reset the device
+            : setCompanionStepKey(CompanionStepKey.Apps);
+        } else {
+          setCompanionStepKey(CompanionStepKey.Apps);
+        }
         seededDeviceHandled.current = true;
         return;
       }
@@ -682,16 +685,6 @@ export const SyncOnboardingCompanion: React.FC<SyncOnboardingCompanionProps> = (
           title: t("syncOnboarding.readyStep.title"),
           doneTitle: t("syncOnboarding.readyStep.doneTitle", { productName }),
         },
-        ...(recoverUpsellRedirection?.enabled
-          ? [
-              {
-                key: CompanionStepKey.Backup,
-                title: t("syncOnboarding.backup.title"),
-                doneTitle: t("syncOnboarding.backup.title"),
-                renderBody: () => <BackupStep device={device} onPressKeepManualBackup={() => {}} />,
-              },
-            ]
-          : []),
       ].map(step => ({
         ...step,
         status:
